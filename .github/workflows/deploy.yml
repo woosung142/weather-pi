@@ -1,6 +1,5 @@
 name: Deploy to Raspberry Pi
 
-# 'main' 브랜치에 코드가 푸시(push)될 때만 이 작업을 실행.
 on:
   push:
     branches:
@@ -8,33 +7,30 @@ on:
 
 jobs:
   deploy:
-    # [핵심] 이 작업은 'self-hosted' 태그가 붙은
-    # 우리 라즈베리파이 러너에서 실행
     runs-on: self-hosted
 
     steps:
-    # 1. Pi 러너가 깃허브 저장소의 최신 코드를 가져옵니다.
-    #    (러너의 작업 폴더(_work)에 받아옵니다)
-    - name: Check out code
+    - name: Check out latest code
       uses: actions/checkout@v4
 
-    # 2. Pi 러너가 최신 코드를 실제 서비스 폴더(/opt/weather-pi)로 복사
     - name: Copy files to app directory
       run: |
-        # 러너가 체크아웃한 위치(현재폴더)의 모든 것을
-        # /opt/weather-pi/ 로 덮어쓰기 복사
         cp -rf ./* /opt/weather-pi/
+        echo "Files copied to /opt/weather-pi"
 
-    # 3. Pi 러너가 가상환경(venv)을 사용해 라이브러리를 설치
-    #    (이 스텝은 requirements.txt 파일이 있을 때만 성공합니다)
     - name: Install dependencies
       run: |
-        # /opt/weather-pi/venv/bin/activate 를 직접 실행하지 않고
-        # venv 안의 pip를 직접 지정하는 것이 더 안정적입니다.
         /opt/weather-pi/venv/bin/pip install -r /opt/weather-pi/requirements.txt
+        echo "Dependencies installed"
 
-    # 4. Pi 러너가 systemd 서비스를 재시작 (Sudo 권한 사용)
-    - name: Restart the app service
+    - name: Reload FastAPI service (graceful restart)
       run: |
-        # 우리가 'sudo visudo'로 미리 권한을 줬던 바로 그 명령어
-        sudo systemctl restart weather-pi.service
+        # daemon-reload는 .service 파일이 바뀔 때만 필요합니다.
+        # 앱 코드만 바뀌었으므로 reload만 실행합니다.
+        sudo systemctl reload weather-pi.service
+        echo "Service gracefully reloaded"
+
+    - name: Check service status
+      run: |
+        # || true : 서비스가 'failed' 상태여도 CI는 성공으로 처리 (상태 보고용)
+        sudo systemctl status weather-pi.service --no-pager -l || true
