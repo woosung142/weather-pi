@@ -15,12 +15,12 @@ jobs:
 
     - name: Copy files to app directory
       run: |
-        cp -rf ./* /opt/weather-pi/
-        echo "Files copied to /opt/weather-pi"
+        cp -rf ./app/* /opt/weather-pi/app/
+        echo "Files copied to /opt/weather-pi/app/"
 
     - name: Install dependencies
       run: |
-        /opt/weather-pi/venv/bin/pip install -r /opt/weather-pi/requirements.txt
+        /opt/weather-pi/venv/bin/pip install -r /opt/weather-pi/app/requirements.txt
         echo "Dependencies installed"
 
     - name: Reload FastAPI service (graceful restart)
